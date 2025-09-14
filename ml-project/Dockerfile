@@ -1,44 +1,36 @@
-# Stage 1: Build stage with dependencies
-FROM python:3.9-slim as builder
-
-WORKDIR /app
-
-# Install pipreqs to generate a precise requirements.txt
-RUN pip install pipreqs
-
-# Copy only the source code to generate requirements
-COPY ./src /app/src
-COPY ./app /app/app
-
-# Generate requirements.txt based on actual imports
-RUN pipreqs . --force
-
-# Install dependencies into a temporary location
-RUN pip install --prefix=/install -r requirements.txt
-
-
-# Stage 2: Final image
 FROM python:3.9-slim
 
 WORKDIR /app
 
-# Copy installed packages from the builder stage
-COPY --from=builder /install /usr/local
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy and install your existing requirements
+COPY dev_requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r dev_requirements.txt
 
 # Copy the entire project
 COPY . .
 
-# Expose the ports for FastAPI and Streamlit
-EXPOSE 8000
-EXPOSE 8501
+# Set environment variables
+ENV PYTHONPATH=/app
 
-# Create a startup script to run both services
-RUN echo '#!/bin/bash' > start.sh && \
-    echo '# Start the FastAPI backend in the background' > start.sh && \
-    echo 'uvicorn app.backend:app --host 0.0.0.0 --port 8000 &' >> start.sh && \
-    echo '# Start the Streamlit frontend' >> start.sh && \
-    echo 'streamlit run app/Home.py --server.port 8501 --server.address 0.0.0.0 --server.fileWatcherType none' >> start.sh && \
-    chmod +x start.sh
+# Expose ports
+EXPOSE 8000 8501
 
-# Run the startup script
+# Create startup script
+RUN echo '#!/bin/bash\n\
+set -e\n\
+echo "🚀 Starting ML Application..."\n\
+echo "📊 Starting FastAPI backend..."\n\
+uvicorn app.backend:app --host 0.0.0.0 --port 8000 &\n\
+BACKEND_PID=$!\n\
+echo "🎭 Starting Streamlit frontend..."\n\
+streamlit run app/Home.py --server.port 8501 --server.address 0.0.0.0 --server.fileWatcherType none --server.enableCORS false\n\
+' > start.sh && chmod +x start.sh
+
 CMD ["./start.sh"]
