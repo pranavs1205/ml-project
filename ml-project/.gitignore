@@ -1,0 +1,25 @@
+# Python bytecode and cache
+__pycache__/
+*.pyc
+
+# Virtual Environment folders (these can be huge)
+venv/
+env/
+ml-project/
+
+# IDE and editor specific settings
+.vscode/
+.idea/
+
+# Data files (datasets should not be stored in Git)
+data/raw/*
+data/processed/*
+
+# Trained models (these are artifacts, not source code)
+models/*.pth
+models/*.pkl
+models/*.joblib
+
+# Operating System files
+.DS_Store
+Thumbs.db
